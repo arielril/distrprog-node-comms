@@ -7,14 +7,12 @@ from .api.errors import register_handlers as register_error_handlers
 def setup_models(app):
     is_supernode = app.config['IS_SUPERNODE']
 
-    print('##### ', app.config)
     if is_supernode:
         from .model import supernode
         snd = supernode.Supernode(
             app.config['MULTICAST_LOCATION'],
         )
     else:
-        print('!@#3!312321@12#123!2331231#131231!#31312 ', app.config)
         filtered_resource = [
             p for p in app.config['RESOURCE_PATH'].split('/') if not p == '']
         node_resource_path = os.path.join(os.getcwd(), *filtered_resource)

@@ -12,7 +12,7 @@ def error_response(status_code, error=None):
         response = error.get_response()
         payload['description'] = error.description
 
-        if not error.code is None:
+        if error.code != None:
             payload['code'] = error.code
 
     response.data = json.dumps(payload)

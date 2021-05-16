@@ -1,6 +1,7 @@
 from flask import jsonify, abort
 
 from ...api import bp
+from ...api.util import format_response
 from ...model.node import Node
 
 
@@ -9,17 +10,6 @@ def get_resource_dict(id, name):
         'id': id,
         'name': name,
     }
-
-
-def format_response(data={}, entity=''):
-    p = {
-        'data': data,
-    }
-
-    if not entity == '':
-        p['entity'] = entity
-
-    return jsonify(p)
 
 
 @bp.route('/node/resources', methods=['GET'])
