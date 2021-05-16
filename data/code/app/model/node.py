@@ -5,16 +5,13 @@ import requests
 
 
 class Node():
-    # resource => map['hash_id'] = file
+    # resource => map['hash_id'] = 'file_name'
     resources = {}
     # endpoint of the supernode
     supernode_url = ''
 
-    def __init__(self, resource_path: str, supernode: str):
+    def __init__(self, supernode: str):
         self.supernode_url = supernode
-
-        self.load_resources(resource_path)
-        self.register_to_supernode()
 
     def register_to_supernode(self):
         try:
@@ -53,4 +50,6 @@ class Node():
 
     @classmethod
     def get_resource(cls, id: str):
+        if not id in cls.resources:
+            return None
         return cls.list_resources()[id]
