@@ -17,3 +17,6 @@ Distributed Programming - Node Communications
 - Timely send alive requests to super nodes (5s)
 - Have an endpoint to "download" a resource list (one or many)
 
+## Resources
+
+- https://github.com/miguelgrinberg/microblog/tree/master
