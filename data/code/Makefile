@@ -1,7 +1,12 @@
-run:
-	@flask run
+IP = 127.0.0.1
+PORT = 5000
 
-r-super: export IS_SUPERNODE=true 
+run: export LHOST=$(IP)
+run: export LPORT=$(PORT)
+run: 
+	@flask run -h $(IP) -p $(PORT)
+
+r-super: export IS_SUPERNODE=true
 r-super: 
 	@make run
 

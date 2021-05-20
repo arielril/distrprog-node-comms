@@ -6,19 +6,27 @@ from .api.errors import register_handlers as register_error_handlers
 
 def setup_models(app):
     is_supernode = app.config['IS_SUPERNODE']
+    loc = '{}:{}'.format(
+        app.config['LHOST'],
+        app.config['LPORT'],
+    )
 
     if is_supernode:
         from .model import supernode
         snd = supernode.Supernode(
+            loc,
             app.config['MULTICAST_LOCATION'],
         )
     else:
+        # LFI here
         filtered_resource = [
             p for p in app.config['RESOURCE_PATH'].split('/') if not p == '']
         node_resource_path = os.path.join(os.getcwd(), *filtered_resource)
 
         from .model import node
+        print('super loc', app.config['SUPERNODE_ENDPOINT'])
         nd = node.Node(
+            loc,
             app.config['SUPERNODE_ENDPOINT'],
         )
         nd.load_resources(node_resource_path)

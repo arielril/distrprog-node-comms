@@ -9,10 +9,12 @@ class Supernode():
     nodes = {}
 
     multicast_location = ''
+    location = ''
 
-    def __init__(self, multicast_loc=''):
+    def __init__(self, location='', multicast_loc=''):
         super().__init__()
         self.multicast_location = multicast_loc
+        self.location = location
 
     @classmethod
     def register_node(cls, location: str, resource_list, name='') -> (bool, Exception):
@@ -39,28 +41,32 @@ class Supernode():
 
     @classmethod
     def get_resource_location_by_id(cls, id: str):
+        """
+        # file doesn't exists here, need to search with the other supernodes
+        return format
+            [{
+                "id": "<file_id>",
+                "file": {
+                    "name": "<file_name>",
+                    "location": "<file_location>"
+                }
+            }]
+        """
+        response = {
+            'id': id,
+            'file': {},
+        }
+
+        print('>>>>', cls.node_resources)
         if not id in cls.node_resources:
-            # file doesn't exists here, need to search with the other supernodes
-            """
-            return format
-                [{
-                    "id": "<file_id>",
-                    "file": {
-                        "name": "<file_name>",
-                        "location": "<file_location>"
-                    }
-                }]
-            """
-            return None
+            return response
 
         file_info = cls.node_resources[id]
-        return {
-            'id': id,
-            'file': {
-                'name': file_info['file_name'],
-                'location': file_info['node_location'],
-            },
+        response['file'] = {
+            'name': file_info['file_name'],
+            'location': file_info['node_location'],
         }
+        return response
 
     def multicasting(self):
         # https://pymotw.com/2/socket/multicast.html

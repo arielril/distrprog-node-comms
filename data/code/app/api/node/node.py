@@ -23,17 +23,31 @@ def list_resources():
     )
 
 
-@bp.route('/node/resources/<id>', methods=['GET'])
+@bp.route('/node/resources/<string:id>', methods=['GET'])
 def get_resource_info(id):
-    resource_name = Node.get_resource(id)
+    resource_info = Node.get_resource(id)
 
-    if resource_name == None:
-        abort(404, description="Resource doesn't exist")
+    if resource_info == None:
+        supernode_resource = Node.supernode_search_resource(id)
 
-    return format_response(
-        data=get_resource_dict(id, resource_name),
-        entity='resource',
-    )
+        if supernode_resource == None:
+            abort(404, description="Resource doesn't exist")
+
+        resource_info = supernode_resource
+
+    if isinstance(resource_info, str):
+        return format_response(
+            data=get_resource_dict(id, resource_info),
+            entity='resource',
+        )
+    elif isinstance(resource_info, dict):
+        return format_response(
+            data={
+                'id': id,
+                'info': resource_info,
+            },
+            entity='resource',
+        ), 302
 
 
 @bp.route('/node/resources/<id>/download', methods=['GET'])

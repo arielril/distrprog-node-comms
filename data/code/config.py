@@ -14,3 +14,5 @@ class Config(object):
     SUPERNODE_ENDPOINT = os.environ.get('SUPERNODE_ENDPOINT', '').strip()
     RESOURCE_PATH = os.environ.get('RESOURCE_PATH', '').strip()
     MULTICAST_LOCATION = os.environ.get('MULTICAST_LOCATION', '').strip()
+    LHOST = os.environ.get('LHOST', '').strip()
+    LPORT = os.environ.get('LPORT', '').strip()
