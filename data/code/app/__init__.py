@@ -1,7 +1,15 @@
 import os
+import logging
+
 from flask import Flask
 from config import Config
 from .api.errors import register_handlers as register_error_handlers
+
+# Logger configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] "%(asctime)s" %(name)s : %(message)s',
+)
 
 
 def setup_models(app):
@@ -24,13 +32,12 @@ def setup_models(app):
         node_resource_path = os.path.join(os.getcwd(), *filtered_resource)
 
         from .model import node
-        print('super loc', app.config['SUPERNODE_ENDPOINT'])
         nd = node.Node(
             loc,
             app.config['SUPERNODE_ENDPOINT'],
         )
         nd.load_resources(node_resource_path)
-        nd.register_to_supernode()
+        nd.register_to_supernode(app)
 
 
 def create_app():

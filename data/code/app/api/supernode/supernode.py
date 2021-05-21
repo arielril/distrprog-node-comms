@@ -77,3 +77,9 @@ def get_alive_nodes():
         data=Supernode.get_alive_nodes(),
         entity='node',
     )
+
+
+@bp.route('/supernode/xxx', methods=['GET'])
+def xxx():
+    Supernode.check_alive_nodes()
+    return '', 204

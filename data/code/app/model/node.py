@@ -1,11 +1,9 @@
 from flask import current_app
-
 from os import listdir
 from os.path import isfile, isdir, join
 from hashlib import sha256
 import requests
 import uuid
-import json
 
 
 class Node():
@@ -38,14 +36,15 @@ class Node():
             self.resources.items(),
         ))
 
-    def register_to_supernode(self):
+    def register_to_supernode(self, app):
         try:
             req_data = {
                 'name': self.node_name,
                 'location': self.location,
                 'resources': self.get_resources_for_registration(),
             }
-            print(f'[+] node ({self.node_name}) is registering.')
+            app.logger.info(
+                f'[+] node ({self.node_name}) is registering.')
 
             res = requests.post(
                 self.supernode_url + '/register',
@@ -54,13 +53,13 @@ class Node():
             )
 
             if res.status_code == 204:
-                print(
+                app.logger.info(
                     f'[+] node ({self.node_name}) is registered')
             else:
-                print(
+                app.logger.warn(
                     f'[!] node ({self.node_name}) is not registered, something happend', res.status_code)
         except Exception as e:
-            print(
+            app.logger.error(
                 f'[!] node ({self.node_name}) is not registered, request failed.', e)
 
     def load_resources(self, path=''):
@@ -94,7 +93,8 @@ class Node():
             )
 
             if res.status_code != 200:
-                print(f'[!] error searching for resource ({id}) at supernode')
+                current_app.logger.error(
+                    f'[!] error searching for resource ({id}) at supernode')
                 return None
 
             res_data = res.json()
@@ -106,4 +106,5 @@ class Node():
 
             return resource_info
         except Exception as e:
-            print(f'[.] failed to search resource ({id}) at supernode.', e)
+            current_app.logger.error(
+                f'[.] failed to search resource ({id}) at supernode.', e)

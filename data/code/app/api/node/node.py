@@ -53,3 +53,8 @@ def get_resource_info(id):
 @bp.route('/node/resources/<id>/download', methods=['GET'])
 def download_resource():
     pass
+
+
+@bp.route('/node/health', methods=['GET'])
+def health():
+    return '', 200

@@ -1,4 +1,6 @@
 from datetime import datetime
+from flask import current_app
+import requests
 
 
 class Supernode():
@@ -15,6 +17,9 @@ class Supernode():
         super().__init__()
         self.multicast_location = multicast_loc
         self.location = location
+
+        from ..background.supernode_alive import start_task
+        start_task(location.split(':')[1])
 
     @classmethod
     def register_node(cls, location: str, resource_list, name='') -> (bool, Exception):
@@ -57,7 +62,7 @@ class Supernode():
             'file': {},
         }
 
-        print('>>>>', cls.node_resources)
+        current_app.logger.debug(f'node resources ({cls.node_resources})')
         if not id in cls.node_resources:
             return response
 
@@ -91,3 +96,33 @@ class Supernode():
                 )
             )
         )
+
+    @classmethod
+    def check_alive_nodes(cls):
+        for (k, v) in cls.nodes.items():
+            try:
+                res = requests.get(
+                    f'http://{k}/api/node/health',
+                    timeout=2,
+                )
+
+                if res.status_code == 200:
+                    current_app.logger.info(
+                        f'[+] node ({k}) is alive'
+                    )
+                    cls.nodes[k]['is_alive'] = True
+                    cls.nodes[k]['last_check'] = datetime.now()
+                else:
+                    current_app.logger.warn(
+                        f"[+] node ({k}) didn't answered for liveness"
+                    )
+                    diff = datetime.now()-cls.nodes[k]['last_check']
+                    if diff.total_seconds() >= 10:
+                        current_app.logger.warn(
+                            f'[+] node ({k}) is dead!'
+                        )
+                        cls.nodes.pop(k, None)
+
+            except Exception:
+                current_app.logger.error(
+                    f'[.] failed to get node aliveness')
