@@ -1,4 +1,5 @@
 {
-  "python.linting.enabled": true,
-  "python.pythonPath": "/usr/local/bin/python"
+  "python.linting.enabled": false,
+  "python.pythonPath": "/usr/local/bin/python",
+  "python.linting.pycodestyleEnabled": true
 }

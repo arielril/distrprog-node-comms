@@ -3,43 +3,44 @@ from flask import current_app
 import requests
 
 
-class Supernode():
+class Supernode:
     # entry => ['<file_hash>'] -> { file_name:str, node_location }
     node_resources = {}
 
     # entry => ['<node_location>'] -> { is_alive:bool, last_check:time }
     nodes = {}
 
-    multicast_location = ''
-    location = ''
+    multicast_location = ""
+    location = ""
 
-    def __init__(self, location='', multicast_loc=''):
+    def __init__(self, location="", multicast_loc=""):
         super().__init__()
         self.multicast_location = multicast_loc
         self.location = location
 
         from ..background.supernode_alive import start_task
-        start_task(location.split(':')[1])
+
+        start_task(location.split(":")[1])
 
     @classmethod
-    def register_node(cls, location: str, resource_list, name='') -> (bool, Exception):
+    def register_node(cls, location: str, resource_list, name="") -> (bool, Exception):
         if not isinstance(resource_list, list):
-            return False, TypeError('node `resources` must be a list')
+            return False, TypeError("node `resources` must be a list")
 
         if len(resource_list) == 0:
             # ignore nodes without resources, just gabage
             return True, None
 
         cls.nodes[location] = {
-            'is_alive': True,
-            'last_check': datetime.now(),
-            'name': name,
+            "is_alive": True,
+            "last_check": datetime.now(),
+            "name": name,
         }
 
         for r in resource_list:
-            cls.node_resources[r['id']] = {
-                'file_name': r['name'],
-                'node_location': location,
+            cls.node_resources[r["id"]] = {
+                "file_name": r["name"],
+                "node_location": location,
             }
 
         return True, None
@@ -58,18 +59,18 @@ class Supernode():
             }]
         """
         response = {
-            'id': id,
-            'file': {},
+            "id": id,
+            "file": {},
         }
 
-        current_app.logger.debug(f'node resources ({cls.node_resources})')
-        if not id in cls.node_resources:
+        current_app.logger.debug(f"node resources ({cls.node_resources})")
+        if id not in cls.node_resources:
             return response
 
         file_info = cls.node_resources[id]
-        response['file'] = {
-            'name': file_info['file_name'],
-            'location': file_info['node_location'],
+        response["file"] = {
+            "name": file_info["file_name"],
+            "location": file_info["node_location"],
         }
         return response
 
@@ -83,46 +84,57 @@ class Supernode():
     def get_alive_nodes(cls):
         def format_alive(node):
             return {
-                'name': node[1]['name'],
-                'location': node[0],
+                "name": node[1]["name"],
+                "location": node[0],
             }
 
         return list(
             map(
                 format_alive,
                 filter(
-                    lambda nd: nd[1]['is_alive'],
+                    lambda nd: nd[1]["is_alive"],
                     cls.nodes.items(),
-                )
+                ),
             )
         )
+
+    @classmethod
+    def _remove_resources_from_node(cls, location=""):
+        filtered_node_resources = {}
+        for (fhash, d) in cls.node_resources:
+            if "node_location" in d and d["node_location"] != location:
+                filtered_node_resources[fhash] = d
+
+        cls.node_resources = filtered_node_resources
+
+    @classmethod
+    def _check_and_remove_dead_node(cls, nd):
+        pass
 
     @classmethod
     def check_alive_nodes(cls):
         for (k, v) in cls.nodes.items():
             try:
                 res = requests.get(
-                    f'http://{k}/api/node/health',
+                    f"http://{k}/api/node/health",
                     timeout=2,
                 )
 
                 if res.status_code == 200:
-                    current_app.logger.info(
-                        f'[+] node ({k}) is alive'
-                    )
-                    cls.nodes[k]['is_alive'] = True
-                    cls.nodes[k]['last_check'] = datetime.now()
+                    current_app.logger.info(f"[+] node ({k}) is alive")
+                    cls.nodes[k]["is_alive"] = True
+                    cls.nodes[k]["last_check"] = datetime.now()
                 else:
-                    current_app.logger.warn(
-                        f"[+] node ({k}) didn't answered for liveness"
-                    )
-                    diff = datetime.now()-cls.nodes[k]['last_check']
-                    if diff.total_seconds() >= 10:
-                        current_app.logger.warn(
-                            f'[+] node ({k}) is dead!'
-                        )
+                    current_app.logger.warn(f"[+] node ({k}) didn't answered for liveness")
+
+                    cls._check_and_remove_dead_node()
+
+                    alive_time_diff = datetime.now() - cls.nodes[k]["last_check"]
+                    if alive_time_diff.total_seconds() >= 10:
+                        current_app.logger.warn(f"[+] node ({k}) is dead!")
                         cls.nodes.pop(k, None)
+                        cls._remove_resources_from_node(k)
 
             except Exception:
-                current_app.logger.error(
-                    f'[.] failed to get node aliveness')
+                alive_time_diff = datetime.now() - cls.nodes[k]["last_check"]
+                current_app.logger.error(f"[.] failed to get node aliveness")
