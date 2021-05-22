@@ -1,8 +1,10 @@
 IP = 127.0.0.1
 PORT = 5000
+GROUP_SIZE = 0
 
 run: export LHOST=$(IP)
 run: export LPORT=$(PORT)
+run: export MULTICAST_GROUP_SIZE=$(GROUP_SIZE)
 run: 
 	@flask run -h $(IP) -p $(PORT)
 

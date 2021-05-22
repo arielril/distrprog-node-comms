@@ -1,6 +1,9 @@
 from datetime import datetime
 from flask import current_app
 import requests
+import threading
+
+from .udp import Multi
 
 
 class Supernode:
@@ -12,11 +15,18 @@ class Supernode:
 
     multicast_location = ""
     location = ""
+    multicast_group_size = 0
+    # multi = None
 
-    def __init__(self, location="", multicast_loc=""):
+    def __init__(self, location="", multicast_loc="", multicast_group_size=0):
         super().__init__()
         self.multicast_location = multicast_loc
         self.location = location
+        self.multicast_group_size = multicast_group_size
+
+        self.multi = Multi(self, self.multicast_group_size)
+        t = threading.Thread(target=self.multi.receive)
+        t.start()
 
         from ..background.supernode_alive import start_task
 
@@ -64,21 +74,44 @@ class Supernode:
         }
 
         current_app.logger.debug(f"node resources ({cls.node_resources})")
-        if id not in cls.node_resources:
-            return response
+        if id in cls.node_resources:
+            current_app.logger.info(f"found resource ({id}) locally")
 
-        file_info = cls.node_resources[id]
-        response["file"] = {
-            "name": file_info["file_name"],
-            "location": file_info["node_location"],
-        }
+            file_info = cls.node_resources[id]
+            response["file"] = {
+                "name": file_info["file_name"],
+                "location": file_info["node_location"],
+            }
+        else:
+            current_app.logger.info(f"searching resource ({id}) in other supernodes")
+
+            multi = Multi(cls, cls.multicast_group_size)
+            file_location = multi.request_file_search_and_listen(id)
+            if file_location != None:
+                response["file"]["location"] = file_location
+
         return response
 
-    def multicasting(self):
+    @classmethod
+    def multicasting(cls, file_id=""):
         # https://pymotw.com/2/socket/multicast.html
         # https://stackoverflow.com/questions/603852/how-do-you-udp-multicast-in-python
         # https://gist.github.com/dksmiffs/96ddbfd11ad7349ab4889b2e79dc2b22
-        pass
+        if file_id == "":
+            return None
+
+        search_result = cls.multi.request_file_search_and_listen(file_id)
+
+        if search_result == None:
+            return None
+
+        response = {
+            "id": file_id,
+            "file": {
+                "location": search_result,
+            },
+        }
+        return response
 
     @classmethod
     def get_alive_nodes(cls):
@@ -101,19 +134,37 @@ class Supernode:
     @classmethod
     def _remove_resources_from_node(cls, location=""):
         filtered_node_resources = {}
-        for (fhash, d) in cls.node_resources:
+        for (fhash, d) in cls.node_resources.items():
             if "node_location" in d and d["node_location"] != location:
                 filtered_node_resources[fhash] = d
 
         cls.node_resources = filtered_node_resources
 
     @classmethod
-    def _check_and_remove_dead_node(cls, nd):
-        pass
+    def _check_and_remove_dead_node(cls, location=""):
+        alive_time_diff = datetime.now() - cls.nodes[location]["last_check"]
+        if alive_time_diff.total_seconds() > 10:
+            current_app.logger.warn(f"[+] node ({location}) is dead!")
+            cls._remove_resources_from_node(location)
+            current_app.logger.warn(f"[+] node ({location}) removed!")
+            # dead
+            return True
+        # alive
+        return False
+
+    @classmethod
+    def _remove_nodes(cls, node_lst=[]):
+        for location in node_lst:
+            cls.nodes.pop(location, None)
 
     @classmethod
     def check_alive_nodes(cls):
+        remove_nodes = []
         for (k, v) in cls.nodes.items():
+            if cls._check_and_remove_dead_node(k):
+                # node is dead
+                remove_nodes.append(k)
+
             try:
                 res = requests.get(
                     f"http://{k}/api/node/health",
@@ -127,14 +178,6 @@ class Supernode:
                 else:
                     current_app.logger.warn(f"[+] node ({k}) didn't answered for liveness")
 
-                    cls._check_and_remove_dead_node()
-
-                    alive_time_diff = datetime.now() - cls.nodes[k]["last_check"]
-                    if alive_time_diff.total_seconds() >= 10:
-                        current_app.logger.warn(f"[+] node ({k}) is dead!")
-                        cls.nodes.pop(k, None)
-                        cls._remove_resources_from_node(k)
-
             except Exception:
-                alive_time_diff = datetime.now() - cls.nodes[k]["last_check"]
                 current_app.logger.error(f"[.] failed to get node aliveness")
+        cls._remove_nodes(remove_nodes)
