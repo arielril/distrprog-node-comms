@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import current_app
 import requests
 import threading
+from uuid import uuid4
 
 from .udp import Multi
 
@@ -15,22 +16,22 @@ class Supernode:
 
     multicast_location = ""
     location = ""
-    multicast_group_size = 0
-    # multi = None
+    multicast_group_size = []
+    name = str(uuid4())
 
     def __init__(self, location="", multicast_loc="", multicast_group_size=0):
         super().__init__()
         self.multicast_location = multicast_loc
         self.location = location
-        self.multicast_group_size = multicast_group_size
+        self.multicast_group_size.append(multicast_group_size)
 
-        self.multi = Multi(self, self.multicast_group_size)
+        self.multi = Multi(self, self.multicast_group_size, supernode_name=self.name)
         t = threading.Thread(target=self.multi.receive)
         t.start()
 
         from ..background.supernode_alive import start_task
 
-        start_task(location.split(":")[1])
+        start_task(location)
 
     @classmethod
     def register_node(cls, location: str, resource_list, name="") -> (bool, Exception):
@@ -75,7 +76,7 @@ class Supernode:
 
         current_app.logger.debug(f"node resources ({cls.node_resources})")
         if id in cls.node_resources:
-            current_app.logger.info(f"found resource ({id}) locally")
+            current_app.logger.debug(f"found resource ({id}) locally")
 
             file_info = cls.node_resources[id]
             response["file"] = {
@@ -85,8 +86,9 @@ class Supernode:
         else:
             current_app.logger.info(f"searching resource ({id}) in other supernodes")
 
-            multi = Multi(cls, cls.multicast_group_size)
+            multi = Multi(cls, msgs_num=cls.multicast_group_size[0], supernode_name=cls.name)
             file_location = multi.request_file_search_and_listen(id)
+
             if file_location != None:
                 response["file"]["location"] = file_location
 
@@ -144,7 +146,7 @@ class Supernode:
     def _check_and_remove_dead_node(cls, location=""):
         alive_time_diff = datetime.now() - cls.nodes[location]["last_check"]
         if alive_time_diff.total_seconds() > 10:
-            current_app.logger.warn(f"[+] node ({location}) is dead!")
+            current_app.logger.debug(f"[+] node ({location}) is dead!")
             cls._remove_resources_from_node(location)
             current_app.logger.warn(f"[+] node ({location}) removed!")
             # dead
@@ -172,7 +174,7 @@ class Supernode:
                 )
 
                 if res.status_code == 200:
-                    current_app.logger.info(f"[+] node ({k}) is alive")
+                    current_app.logger.debug(f"[+] node ({k}) is alive")
                     cls.nodes[k]["is_alive"] = True
                     cls.nodes[k]["last_check"] = datetime.now()
                 else:

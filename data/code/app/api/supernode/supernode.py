@@ -46,8 +46,7 @@ def register():
     return "", 204
 
 
-# TODO GET /search/<file_id> | GET /search?node_name=<str>&file_name=<str>&hash_id=<str>
-@bp.route("/supernode/search", methods=["GET"])
+# GET /search/<file_id> | GET /search?node_name=<str>&file_name=<str>&hash_ids=<str>
 @bp.route("/supernode/search/<string:file_id>", methods=["GET"])
 def resource_search(file_id=""):
     # send the multicast search to other nodes
@@ -61,6 +60,25 @@ def resource_search(file_id=""):
 
     return format_response(
         data=data,
+        entity="node_resource_location",
+    )
+
+
+@bp.route("/supernode/search", methods=["GET"])
+def resource_list_search():
+    hash_ids = request.args.get("hash_ids", "", type=str)
+    hash_ids = [h.strip() for h in hash_ids.split(",") if len(h) > 0]
+
+    resource_list = []
+
+    for id in hash_ids:
+        local_search = Supernode.get_resource_location_by_id(id)
+
+        if "file" in local_search and "location" in local_search["file"]:
+            resource_list.append(local_search)
+
+    return format_response(
+        data=resource_list,
         entity="node_resource_location",
     )
 
