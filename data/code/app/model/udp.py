@@ -30,7 +30,7 @@ class Multi:
 
         if sname == self.supernode_name:
             # ignore if it myself
-            print(f"[MULTI-ProcSReq] Ignoring message from myself ({msg_type};{fhash})")
+            # print(f"[MULTI-ProcSReq] Ignoring message from myself ({msg_type};{fhash})")
             return
 
         if fhash in self.supernode.node_resources:
@@ -47,10 +47,10 @@ class Multi:
             return
 
         sname, msg_type, answer = message.split(";")
-        print("Process search response", sname, msg_type, answer)
+
         if sname == self.supernode_name:
             # ignore response from myself
-            print(f"[MULTI-ProcSResp] Ignoring message from myself ({msg_type};{answer})")
+            # print(f"[MULTI-ProcSResp] Ignoring message from myself ({msg_type};{answer})")
             return None
 
         if msg_type == "21":
@@ -107,7 +107,7 @@ class Multi:
 
         print(f"[MULTI-Send] Multicast sending message ({message})")
         s.sendto(bytes(message, "utf-8"), self.group)
-        print(f"[MULTI-Send] Multicast message ({message}) was sent")
+        # print(f"[MULTI-Send] Multicast message ({message}) was sent")
         s.close()
 
     def request_file_search_and_listen(self, file_hash=""):
@@ -139,7 +139,7 @@ class Multi:
 
             data, addr = s.recvfrom(1024)
             data = data.decode("utf-8")
-            print(f"[MULTI-RSearch] Multicast received search response from ({addr}). [{data}]")
+            # print(f"[MULTI-RSearch] Multicast received search response from ({addr}). [{data}]")
 
             if self.supernode_name not in data:
                 received_messages += 1
