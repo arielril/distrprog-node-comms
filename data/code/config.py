@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-env_file = "supernode" if os.environ.get("IS_SUPERNODE", "").strip() == "true" else "node"
+env_file = os.environ.get("CONFIG_FILE", "").strip()
 
 load_dotenv(os.path.join(basedir, "app", "config", f"{env_file}.env"))
 

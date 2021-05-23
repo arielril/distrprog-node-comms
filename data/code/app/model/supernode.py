@@ -29,9 +29,9 @@ class Supernode:
         t = threading.Thread(target=self.multi.receive)
         t.start()
 
-        from ..background.supernode_alive import start_task
+        # from ..background.supernode_alive import start_task
 
-        start_task(location)
+        # start_task(location)
 
     @classmethod
     def register_node(cls, location: str, resource_list, name="") -> (bool, Exception):
@@ -88,6 +88,7 @@ class Supernode:
 
             multi = Multi(cls, msgs_num=cls.multicast_group_size[0], supernode_name=cls.name)
             file_location = multi.request_file_search_and_listen(id)
+            print("#@@@!!! received file location", file_location)
 
             if file_location != None:
                 response["file"]["location"] = file_location
